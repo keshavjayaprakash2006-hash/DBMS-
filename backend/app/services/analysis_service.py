@@ -19,7 +19,7 @@ from app.core.config import settings
 logger = logging.getLogger(__name__)
 
 
-def run_analysis(db: Session, subject_id: UUID) -> AnalysisRun:
+def run_analysis(db: Session, subject_id: UUID, analysis_id: Optional[UUID] = None) -> AnalysisRun:
     """
     Main analysis pipeline:
     1. Get all PYQs and note chunks for the subject (with embeddings).
@@ -27,19 +27,32 @@ def run_analysis(db: Session, subject_id: UUID) -> AnalysisRun:
     3. Aggregate hit counts and weighted marks per chunk.
     4. Normalize scores and persist results.
     """
-    # Create a new analysis run
-    analysis = AnalysisRun(
-        subject_id=subject_id,
-        status=AnalysisStatus.RUNNING,
-        started_at=datetime.now(timezone.utc),
-        configuration={
+    if analysis_id:
+        analysis = db.query(AnalysisRun).filter(AnalysisRun.analysis_id == analysis_id).first()
+    else:
+        analysis = None
+
+    if analysis:
+        analysis.status = AnalysisStatus.RUNNING
+        analysis.started_at = datetime.now(timezone.utc)
+        analysis.configuration = {
             "top_k": settings.TOP_K_MATCHES,
             "embedding_model": settings.EMBEDDING_MODEL_NAME,
             "embedding_dimension": settings.EMBEDDING_DIMENSION,
-        },
-    )
-    db.add(analysis)
-    db.flush()  # get analysis_id
+        }
+    else:
+        analysis = AnalysisRun(
+            subject_id=subject_id,
+            status=AnalysisStatus.RUNNING,
+            started_at=datetime.now(timezone.utc),
+            configuration={
+                "top_k": settings.TOP_K_MATCHES,
+                "embedding_model": settings.EMBEDDING_MODEL_NAME,
+                "embedding_dimension": settings.EMBEDDING_DIMENSION,
+            },
+        )
+        db.add(analysis)
+    db.flush()
 
     try:
         # Count resources
@@ -83,7 +96,7 @@ def run_analysis(db: Session, subject_id: UUID) -> AnalysisRun:
                     LIMIT :top_k
                 """),
                 {
-                    "embedding": str(pyq.embedding),
+                    "embedding": str(pyq.embedding.tolist()) if hasattr(pyq.embedding, "tolist") else str(list(pyq.embedding)),
                     "subject_id": str(subject_id),
                     "top_k": settings.TOP_K_MATCHES,
                 },

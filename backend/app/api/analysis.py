@@ -17,14 +17,14 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["Analysis"])
 
 
-def _run_analysis_background(subject_id: str, db_url: str):
+def _run_analysis_background(subject_id: str, db_url: str, analysis_id: Optional[str] = None):
     from sqlalchemy import create_engine
     from sqlalchemy.orm import sessionmaker
     engine = create_engine(db_url)
     SessionLocal = sessionmaker(bind=engine)
     db = SessionLocal()
     try:
-        analysis_service.run_analysis(db, UUID(subject_id))
+        analysis_service.run_analysis(db, UUID(subject_id), UUID(analysis_id) if analysis_id else None)
     except Exception as e:
         logger.error(f"Analysis failed for subject {subject_id}: {e}")
     finally:
@@ -85,7 +85,12 @@ def trigger_analysis(
     db.commit()
     db.refresh(analysis)
 
-    background_tasks.add_task(_run_analysis_background, str(subject_id), settings.DATABASE_URL)
+    background_tasks.add_task(
+        _run_analysis_background,
+        str(subject_id),
+        settings.DATABASE_URL,
+        str(analysis.analysis_id),
+    )
 
     return AnalysisRunOut(
         analysis_id=analysis.analysis_id,

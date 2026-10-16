@@ -33,6 +33,7 @@ wheels/
 htmlcov/
 test_pyq.db
 *.db
+*.db-journal
 *.sqlite3
 
 # Node & Frontend

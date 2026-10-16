@@ -43,7 +43,12 @@ def check_database_connection() -> dict:
                 pgvector_available = pgvector_result is not None
             except Exception:
                 pgvector_available = False
-        return {"status": "ok", "pgvector": pgvector_available}
+        return {
+            "status": "ok",
+            "pgvector": pgvector_available,
+            "pgvector_enabled": pgvector_available,
+            "dialect": engine.dialect.name,
+        }
     except Exception as e:
         return {"status": "error", "error": str(e), "pgvector": False}
 

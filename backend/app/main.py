@@ -57,6 +57,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/health", tags=["Health"])
+def root_health():
+    return {"status": "ok", "service": settings.APP_NAME}
+
+
 # Include routers
 app.include_router(health.router)
 app.include_router(subjects.router)

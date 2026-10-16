@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     APP_HOST: str = "0.0.0.0"
     APP_PORT: int = 8000
 
-    DATABASE_URL: str = "postgresql://postgres:postgres@localhost:5432/pyq_analyzer"
+    DATABASE_URL: str = "postgresql+psycopg://postgres:postgres@localhost:5432/pyq_analyzer"
 
     EMBEDDING_MODEL_NAME: str = "all-MiniLM-L6-v2"
     EMBEDDING_DIMENSION: int = 384

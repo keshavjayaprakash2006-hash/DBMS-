@@ -29,7 +29,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      - DATABASE_URL=postgresql://postgres:postgrespassword@db:5432/pyq_analyzer
+      - DATABASE_URL=postgresql+psycopg://postgres:postgrespassword@db:5432/pyq_analyzer
       - EMBEDDING_MODEL_NAME=all-MiniLM-L6-v2
       - EMBEDDING_DIMENSION=384
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
