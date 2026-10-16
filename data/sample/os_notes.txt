@@ -1,0 +1,115 @@
+SAMPLE OPERATING SYSTEMS NOTES
+================================
+(This is sample/demonstration study material - not an official textbook)
+
+UNIT 1: INTRODUCTION TO OPERATING SYSTEMS
+
+An operating system (OS) is system software that manages computer hardware and software resources. It provides common services for computer programs and acts as an intermediary between users and computer hardware.
+
+Key functions of an operating system include process management, memory management, file system management, device management, and security. The OS provides an abstract layer that allows programs to interact with hardware without needing to know hardware details.
+
+Types of Operating Systems:
+- Batch Operating Systems: Jobs are collected and processed in batches without user interaction.
+- Time-Sharing Operating Systems: Multiple users can use the computer simultaneously using time-sharing.
+- Distributed Operating Systems: Manages a group of independent computers and makes them appear to users as a single coherent system.
+- Real-Time Operating Systems (RTOS): Used for applications requiring guaranteed response times.
+
+UNIT 2: PROCESS MANAGEMENT
+
+A process is a program in execution. It is the basic unit of work in an operating system. A process includes the program code, current activity (program counter), processor registers, process stack, and data section.
+
+Process States:
+A process can be in one of the following states:
+- New: The process is being created.
+- Ready: The process is waiting to be assigned to a processor.
+- Running: Instructions are being executed.
+- Waiting (Blocked): The process is waiting for some event.
+- Terminated: The process has finished execution.
+
+The Process Control Block (PCB) is a data structure maintained by the OS for every process. It contains process ID, process state, program counter, CPU registers, memory management information, and I/O status.
+
+Context switching is the mechanism to store and restore the state of a CPU so that process execution can be resumed later from the same point. Context switches are computationally expensive operations.
+
+UNIT 3: PROCESS SYNCHRONIZATION
+
+Process synchronization ensures that multiple processes cooperate correctly when sharing data. Race conditions occur when multiple processes access and manipulate shared data concurrently and the outcome depends on the execution order.
+
+Critical Section Problem:
+A critical section is a code segment that accesses shared variables and must not be concurrently executed by more than one process. The solution must satisfy:
+1. Mutual Exclusion: Only one process can execute in the critical section at a time.
+2. Progress: If no process is in the critical section, a process that wants to enter must be able to.
+3. Bounded Waiting: There must be a bound on the number of times other processes can enter the critical section before a waiting process is allowed in.
+
+Semaphores:
+A semaphore is a synchronization tool that uses two atomic operations: wait (P) and signal (V). Binary semaphores (mutex) have values 0 or 1. Counting semaphores have values ranging over an unrestricted domain.
+
+The Producer-Consumer Problem is a classic synchronization problem. The producer generates data and puts it in a buffer. The consumer takes data from the buffer. The challenge is to ensure the producer does not add data to a full buffer and the consumer does not remove from an empty buffer.
+
+Monitors are high-level synchronization constructs. A monitor is an abstract data type that includes both data and procedures operating on that data, with built-in mutual exclusion.
+
+UNIT 4: DEADLOCKS
+
+A deadlock is a situation where a set of processes are blocked because each process is holding a resource and waiting to acquire a resource held by another process in the set.
+
+Necessary Conditions for Deadlock (Coffman Conditions):
+1. Mutual Exclusion: At least one resource must be held in a non-shareable mode.
+2. Hold and Wait: A process must be holding at least one resource and waiting for additional resources held by other processes.
+3. No Preemption: Resources cannot be forcibly taken from a process.
+4. Circular Wait: A circular chain of processes exists, where each process holds a resource needed by the next process.
+
+Deadlock Prevention eliminates one of the four necessary conditions:
+- Eliminating mutual exclusion is generally not feasible.
+- Eliminating hold and wait: require processes to request all resources before starting.
+- Eliminating no preemption: allow resource preemption.
+- Eliminating circular wait: impose a total ordering of resource types.
+
+Deadlock Avoidance uses the Banker's Algorithm to ensure the system never enters an unsafe state. The algorithm checks if resource allocation leaves the system in a safe state.
+
+Deadlock Detection and Recovery: Allow deadlocks to occur, detect them using resource allocation graphs, and recover by process termination or resource preemption.
+
+UNIT 5: CPU SCHEDULING
+
+CPU scheduling determines which process gets the CPU when multiple processes are ready. The goal is to maximize CPU utilization and throughput while minimizing waiting and response times.
+
+Scheduling Algorithms:
+
+First Come First Served (FCFS): Processes are executed in the order they arrive. Simple to implement but suffers from the convoy effect where short processes wait for long processes.
+
+Shortest Job First (SJF): The process with the smallest CPU burst is executed next. Optimal for minimizing average waiting time but requires knowing burst time in advance.
+
+Round Robin (RR): Each process gets a fixed time quantum in a cyclic manner. Good for time-sharing systems. Performance depends heavily on time quantum size.
+
+Priority Scheduling: Each process has a priority. The CPU is given to the process with the highest priority. Can suffer from starvation of low-priority processes. Aging can be used to gradually increase the priority of waiting processes.
+
+Multilevel Queue Scheduling: Processes are permanently assigned to queues (e.g., foreground and background) with different scheduling algorithms.
+
+UNIT 6: MEMORY MANAGEMENT
+
+Memory management is the functionality of an OS that handles the computer's primary memory. It keeps track of each memory location, allocates memory when programs request it, and frees it when no longer needed.
+
+Paging divides logical memory into fixed-size blocks called pages and physical memory into blocks of the same size called frames. The OS maintains a page table to map logical to physical addresses. Paging eliminates external fragmentation but can cause internal fragmentation.
+
+Segmentation divides the logical address space into variable-size segments based on the logical structure of the program (code, stack, data). Each segment has a base and limit. Segmentation eliminates internal fragmentation but can cause external fragmentation.
+
+Virtual Memory allows execution of processes that are not completely in memory. Only the required part of a process needs to be in memory. This allows running processes larger than physical memory.
+
+Page Replacement Algorithms are used when a page fault occurs and no free frames are available:
+- FIFO (First In First Out): Replace the oldest page. Simple but not always optimal.
+- LRU (Least Recently Used): Replace the page that has not been used for the longest time. Good performance but requires tracking usage.
+- Optimal: Replace the page that will not be used for the longest time in the future. Best possible algorithm but not implementable in practice.
+
+Thrashing occurs when a process spends more time paging than executing. It happens when the number of frames allocated to a process is insufficient. The working set model helps prevent thrashing by keeping track of the pages actually being used.
+
+UNIT 7: FILE SYSTEMS
+
+A file system manages files on secondary storage. It provides mechanisms for storage, retrieval, and update of data. Files are the basic unit of storage in a file system.
+
+File attributes include name, identifier, type, location, size, protection, time, date, and user identification.
+
+Directory structures organize files:
+- Single-level: All files in one directory.
+- Two-level: Separate directories for each user.
+- Tree-structured: Hierarchical directories.
+- Acyclic-graph: Allows sharing of files and subdirectories.
+
+File system implementation uses disk blocks. Free-space management tracks available disk blocks. Disk scheduling algorithms like FCFS, SSTF, and SCAN optimize disk access times.

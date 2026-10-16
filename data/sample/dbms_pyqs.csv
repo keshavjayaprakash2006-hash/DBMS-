@@ -1,0 +1,13 @@
+question,exam_year,marks,semester,course_code,unit_name
+"Explain the ACID properties of database transactions with a banking funds transfer example.",2024,10,Semester 5,CS301,Unit 3: Transaction Management
+"What is Boyce-Codd Normal Form (BCNF)? How does it differ from 3NF with respect to functional dependencies?",2024,10,Semester 5,CS301,Unit 2: Normalization
+"Describe the Two-Phase Locking (2PL) protocol. Differentiate between Basic 2PL, Strict 2PL, and Rigorous 2PL.",2023,10,Semester 5,CS301,Unit 4: Concurrency Control
+"Explain B+ Tree indexing. Why are B+ trees preferred over binary search trees and B-trees for database disks?",2023,15,Semester 5,CS301,Unit 5: Indexing Structures
+"Define Conflict Serializability and explain how precedence graphs are used to test serializability of execution schedules.",2023,8,Semester 5,CS301,Unit 4: Concurrency Control
+"What is a functional dependency? State and explain Armstrong's Axioms for deriving functional dependencies.",2022,5,Semester 5,CS301,Unit 2: Normalization
+"Explain Deadlock handling techniques in DBMS: compare Wait-Die scheme and Wound-Wait timestamp prevention schemes.",2022,10,Semester 5,CS301,Unit 4: Concurrency Control
+"Discuss heuristic optimization in query processing with relational algebra transformation rules.",2022,10,Semester 5,CS301,Unit 6: Query Processing
+"What are insertion, deletion, and update anomalies in relational database design? Explain how 2NF solves partial dependency.",2021,8,Semester 5,CS301,Unit 2: Normalization
+"Explain write-ahead logging (WAL) and checkpointing for database recovery and durability.",2021,10,Semester 5,CS301,Unit 3: Transaction Management
+"Describe different join algorithms in query processing including Nested-Loop Join, Sort-Merge Join, and Hash Join.",2020,10,Semester 5,CS301,Unit 6: Query Processing
+"Explain the relational model concepts: candidate key, primary key, super key, and foreign key with examples.",2020,5,Semester 5,CS301,Unit 1: Introduction to DBMS

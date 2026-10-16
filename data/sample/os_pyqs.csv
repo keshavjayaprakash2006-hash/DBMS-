@@ -1,0 +1,9 @@
+subject,exam_year,marks,question,semester,unit_name
+Operating Systems,2023,10,What is a deadlock? Explain the necessary conditions for a deadlock to occur. How can deadlocks be prevented?,Even,Deadlocks
+Operating Systems,2023,5,Explain the concept of a semaphore and how it is used for process synchronization.,Even,Process Synchronization
+Operating Systems,2022,10,"Compare and contrast the First Come First Served (FCFS), Shortest Job First (SJF), and Round Robin CPU scheduling algorithms with examples.",Odd,CPU Scheduling
+Operating Systems,2022,5,What is thrashing in the context of virtual memory? How can it be avoided?,Odd,Memory Management
+Operating Systems,2021,10,"Explain paging and segmentation as memory management techniques. What are their advantages and disadvantages?",Even,Memory Management
+Operating Systems,2021,5,Describe the producer-consumer problem and provide a solution using semaphores.,Even,Process Synchronization
+Operating Systems,2020,10,Explain the various page replacement algorithms: FIFO LRU and Optimal. Which is best in practice?,Odd,Memory Management
+Operating Systems,2020,5,What is a process state diagram? Explain all the states a process can be in.,Odd,Processes
