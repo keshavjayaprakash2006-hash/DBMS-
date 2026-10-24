@@ -156,11 +156,12 @@ def chat(request: ChatRequest, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(session)
 
+    active_model = chat_service.check_ollama().get("active_model", settings.OLLAMA_MODEL)
     return ChatResponse(
         answer=final_answer,
         session_id=session.session_id,
         sources=sources,
-        model_used=settings.OLLAMA_MODEL if answer else None,
+        model_used=active_model if answer else None,
         error=error,
     )
 

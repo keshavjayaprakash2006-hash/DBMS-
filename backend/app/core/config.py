@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     EMBEDDING_DIMENSION: int = 384
 
     OLLAMA_BASE_URL: str = "http://localhost:11434"
-    OLLAMA_MODEL: str = "llama3.2"
+    OLLAMA_MODEL: str = "mistral"
     OLLAMA_TIMEOUT: int = 120
 
     UPLOAD_DIRECTORY: str = "uploads"

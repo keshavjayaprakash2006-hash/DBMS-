@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+from sqlalchemy import text
 from app.core.config import settings
 from app.core.logging import setup_logging
 from app.db.database import engine, init_pgvector
@@ -27,12 +28,27 @@ async def lifespan(app: FastAPI):
     # Ensure upload directory exists
     os.makedirs(settings.UPLOAD_DIRECTORY, exist_ok=True)
 
-    # Initialize database tables and pgvector
+    # Initialize database tables, pgvector, and HNSW indexes
     try:
         with engine.connect() as conn:
             init_pgvector(conn)
         Base.metadata.create_all(bind=engine)
-        logger.info("Database tables initialized")
+        if engine.dialect.name == "postgresql":
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text(
+                        "CREATE INDEX IF NOT EXISTS idx_note_chunks_embedding_hnsw "
+                        "ON note_chunks USING hnsw (embedding vector_cosine_ops)"
+                    ))
+                    conn.execute(text(
+                        "CREATE INDEX IF NOT EXISTS idx_pyqs_embedding_hnsw "
+                        "ON pyqs USING hnsw (embedding vector_cosine_ops)"
+                    ))
+                    conn.commit()
+                    logger.info("pgvector HNSW indexes verified")
+            except Exception as idx_err:
+                logger.warning(f"Note on HNSW indexes: {idx_err}")
+        logger.info("Database tables initialized successfully")
     except Exception as e:
         logger.error(f"Database initialization failed: {e}")
         logger.warning("Application starting without database. Check DATABASE_URL in .env")

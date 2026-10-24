@@ -77,9 +77,29 @@ Detailed schema definitions, foreign key rules, and index explanations can be fo
 
 ## 🚀 Quickstart Guide
 
-### Option A: One-Command Docker Setup (Recommended)
+### 🪟 Windows One-Click (Recommended for Beginners)
 
-Run the full stack (PostgreSQL + pgvector, Backend, Frontend) with Docker Compose:
+If you are on Windows 11 with Docker Desktop:
+
+1. **Start the Application**: Simply double-click **`start-dbms.bat`** in the project folder.
+   - It automatically checks Docker Desktop and starts it if necessary.
+   - It checks local Ollama AI status on `http://localhost:11434`.
+   - It spins up PostgreSQL 16 with pgvector, FastAPI, and React Vite.
+   - It waits until all health checks pass and automatically opens **[http://localhost:3000](http://localhost:3000)** in your default browser.
+2. **Stop the Application**: Double-click **`stop-dbms.bat`**.
+   - Containers are stopped cleanly.
+   - Your PostgreSQL database volume and all uploaded course materials are safely preserved intact.
+3. **Seed Sample Demonstration Data**:
+   ```bash
+   python scripts/seed_sample_data.py
+   ```
+   This seeds Operating Systems (CS204) and Database Management Systems (CS301) notes, PYQs, and computes the study heatmap.
+
+---
+
+### Option A: Command Line Docker Setup
+
+Run the full stack with Docker Compose:
 
 ```bash
 # 1. Clone repository

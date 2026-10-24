@@ -1,0 +1,9 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+test_pyq.db*
+test_uploads
+.git
+.vscode

@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 def check_ollama() -> dict:
-    """Check if Ollama is running and the configured model is available."""
+    """Check if Ollama is running and detect available models."""
     try:
         with httpx.Client(timeout=5.0) as client:
             resp = client.get(f"{settings.OLLAMA_BASE_URL}/api/tags")
@@ -20,20 +20,31 @@ def check_ollama() -> dict:
                 return {"status": "error", "error": f"Ollama returned HTTP {resp.status_code}"}
             data = resp.json()
             models = [m["name"] for m in data.get("models", [])]
-            model_available = any(
-                settings.OLLAMA_MODEL in m or m.startswith(settings.OLLAMA_MODEL)
-                for m in models
-            )
+            
+            # Find matching model
+            target_model = settings.OLLAMA_MODEL.strip().lower()
+            matched_model = None
+            for m in models:
+                m_clean = m.lower()
+                if target_model == m_clean or target_model == m_clean.split(":")[0] or target_model in m_clean:
+                    matched_model = m
+                    break
+            
+            # If not directly matched, use first installed model if available
+            active_model = matched_model or (models[0] if models else target_model)
+            model_available = matched_model is not None or len(models) > 0
+
             return {
                 "status": "ok" if model_available else "model_missing",
                 "available_models": models,
                 "configured_model": settings.OLLAMA_MODEL,
+                "active_model": active_model,
                 "model_available": model_available,
             }
     except httpx.ConnectError:
         return {
             "status": "unavailable",
-            "error": "Cannot connect to Ollama. Is it running? Install from https://ollama.ai and run: ollama serve",
+            "error": "Cannot connect to Ollama. Ensure Ollama is running on your host machine (ollama serve).",
         }
     except Exception as e:
         return {"status": "error", "error": str(e)}
@@ -89,14 +100,16 @@ def generate_chat_response(
             "The rest of the application (search, heatmap, uploads) works without Ollama."
         )
 
-    if ollama_status["status"] == "model_missing":
+    if ollama_status["status"] == "model_missing" or not ollama_status.get("model_available"):
         available = ", ".join(ollama_status.get("available_models", []))
         return "", (
-            f"Ollama is running but model '{settings.OLLAMA_MODEL}' is not available.\n"
+            f"Ollama is running but no compatible models were found.\n"
+            f"Configured model: '{settings.OLLAMA_MODEL}'\n"
             f"Run: ollama pull {settings.OLLAMA_MODEL}\n"
-            f"Available models: {available or 'none'}"
+            f"Available models on host: {available or 'none'}"
         )
 
+    model_to_use = ollama_status.get("active_model") or settings.OLLAMA_MODEL
     prompt = build_rag_prompt(question, chunks, pyqs)
 
     try:
@@ -104,7 +117,7 @@ def generate_chat_response(
             resp = client.post(
                 f"{settings.OLLAMA_BASE_URL}/api/generate",
                 json={
-                    "model": settings.OLLAMA_MODEL,
+                    "model": model_to_use,
                     "prompt": prompt,
                     "stream": False,
                 },
