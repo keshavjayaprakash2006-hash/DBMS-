@@ -176,22 +176,6 @@ See [docs/TESTING.md](docs/TESTING.md) for detailed test documentation.
 
 ---
 
-## 🎓 Faculty Demonstration Script
-
-For academic evaluation and viva demonstration, execute the queries in [docs/SQL_DEMONSTRATIONS.sql](docs/SQL_DEMONSTRATIONS.sql):
-
-```bash
-psql -U postgres -d pyq_analyzer -f docs/SQL_DEMONSTRATIONS.sql
-```
-
-The script demonstrates:
-1. `pgvector` extension and HNSW index verification.
-2. Cosine distance queries (`<=>`) calculating semantic similarity.
-3. Multi-table joins connecting PYQs to note paragraphs.
-4. Window functions (`DENSE_RANK()`) ranking high-yield curriculum paragraphs.
-5. Transactional rollback and referential integrity (`ON DELETE CASCADE`).
-
----
 
 ## 📁 Repository Structure
 
