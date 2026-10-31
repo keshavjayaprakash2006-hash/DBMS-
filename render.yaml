@@ -41,8 +41,6 @@ services:
   - type: web
     runtime: static
     name: semantic-pyq-frontend
-    region: oregon
-    plan: free
     rootDir: frontend
     buildCommand: "npm install && npm run build"
     staticPublishPath: ./dist
