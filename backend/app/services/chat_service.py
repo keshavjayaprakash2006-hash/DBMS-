@@ -210,7 +210,7 @@ def _call_gemini_api(prompt: str, model: str, api_key: str, retries: int = 3) ->
                         if answer:
                             return answer, None
                     return "", "Gemini API returned an empty response. Try rephrasing your question."
-                elif resp.status_code == 429:
+                elif resp.status_code in (429, 503):
                     wait_time = 2.0 * (attempt + 1)
                     logger.warning(f"Gemini API rate limited (429). Attempt {attempt+1}/{retries}, waiting {wait_time}s...")
                     time.sleep(wait_time)
@@ -257,9 +257,9 @@ def generate_chat_response(
         return answer, None
 
     # If configured model failed with 404 or unsupported, attempt fallback to gemini-1.5-flash
-    if error and ("not found" in error.lower() or "404" in error):
+    if error and ("not found" in error.lower() or "404" in error or "503" in error):
         logger.info("Attempting fallback to gemini-1.5-flash...")
-        fb_answer, fb_error = _call_gemini_api(prompt, "gemini-2.0-flash", api_key)
+        fb_answer, fb_error = _call_gemini_api(prompt, "gemini-2.5-flash", api_key)
         if fb_answer:
             return fb_answer, None
         return "", fb_error
