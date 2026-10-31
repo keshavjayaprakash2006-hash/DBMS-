@@ -16,6 +16,7 @@ engine_kwargs = {
 if is_sqlite:
     engine_kwargs["connect_args"] = {"check_same_thread": False}
 else:
+    engine_kwargs["connect_args"] = {"connect_timeout": 10}
     engine_kwargs["poolclass"] = QueuePool
     engine_kwargs["pool_size"] = 5
     engine_kwargs["max_overflow"] = 10
