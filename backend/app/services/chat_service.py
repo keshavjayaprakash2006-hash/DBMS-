@@ -178,43 +178,70 @@ STUDENT QUESTION:
 Provide a comprehensive, structured response:"""
 
 
-def _call_gemini_api(prompt: str, model: str, api_key: str, retries: int = 3) -> Tuple[str, Optional[str]]:
-    """Execute API call to Gemini with exponential backoff on transient errors."""
+def _call_gemini_api(prompt: str, model: str, api_key: str, retries: int = 2) -> Tuple[str, Optional[str]]:
+    """Execute API call to Gemini with low-latency thinking configuration and exponential backoff."""
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     payload = {
         "contents": [
             {
-                "role": "user",
                 "parts": [{"text": prompt}],
             }
         ],
         "generationConfig": {
             "temperature": 0.2,
             "topP": 0.95,
-            "maxOutputTokens": 2048,
+            "maxOutputTokens": 1500,
+            "thinkingConfig": {
+                "thinkingLevel": "LOW",
+            },
         },
     }
 
     last_error = None
     for attempt in range(retries):
         try:
-            with httpx.Client(timeout=settings.GEMINI_TIMEOUT) as client:
+            with httpx.Client(timeout=25.0) as client:
                 resp = client.post(url, json=payload)
                 if resp.status_code == 200:
                     data = resp.json()
                     candidates = data.get("candidates", [])
                     if candidates:
                         parts = candidates[0].get("content", {}).get("parts", [])
-                        text_parts = [p.get("text", "") for p in parts if "text" in p]
+                        text_parts = [
+                            p.get("text", "")
+                            for p in parts
+                            if "text" in p and not p.get("thought", False)
+                        ]
                         answer = "".join(text_parts).strip()
+                        if not answer:
+                            answer = "".join(p.get("text", "") for p in parts if "text" in p).strip()
                         if answer:
                             return answer, None
                     return "", "Gemini API returned an empty response. Try rephrasing your question."
+                elif resp.status_code == 400 and "thinkingConfig" in payload.get("generationConfig", {}):
+                    logger.info(f"Model {model} rejected thinkingConfig; retrying without thinkingConfig...")
+                    payload_no_thinking = {
+                        "contents": [{"parts": [{"text": prompt}]}],
+                        "generationConfig": {
+                            "temperature": 0.2,
+                            "topP": 0.95,
+                            "maxOutputTokens": 1500,
+                        },
+                    }
+                    retry_resp = client.post(url, json=payload_no_thinking)
+                    if retry_resp.status_code == 200:
+                        candidates = retry_resp.json().get("candidates", [])
+                        if candidates:
+                            parts = candidates[0].get("content", {}).get("parts", [])
+                            answer = "".join(p.get("text", "") for p in parts if "text" in p).strip()
+                            if answer:
+                                return answer, None
+                    return "", f"Invalid request or API error (HTTP 400): {retry_resp.text[:200]}"
                 elif resp.status_code in (429, 503):
                     wait_time = 2.0 * (attempt + 1)
-                    logger.warning(f"Gemini API rate limited (429). Attempt {attempt+1}/{retries}, waiting {wait_time}s...")
+                    logger.warning(f"Gemini API rate limited or unavailable ({resp.status_code}). Attempt {attempt+1}/{retries}, waiting {wait_time}s...")
                     time.sleep(wait_time)
-                    last_error = "Gemini API rate limit or quota exceeded. Please wait a moment and try again."
+                    last_error = "Gemini API is temporarily busy or rate limit reached. Please wait a moment and try again."
                 elif resp.status_code == 400:
                     return "", f"Invalid request or API key (HTTP 400): {resp.text[:200]}"
                 elif resp.status_code == 403:
@@ -222,7 +249,7 @@ def _call_gemini_api(prompt: str, model: str, api_key: str, retries: int = 3) ->
                 else:
                     last_error = f"Gemini API error (HTTP {resp.status_code}): {resp.text[:200]}"
         except httpx.TimeoutException:
-            last_error = f"Gemini API request timed out after {settings.GEMINI_TIMEOUT} seconds. Please try again."
+            last_error = "Gemini API request timed out after 25 seconds. Please try again."
         except httpx.RequestError as e:
             last_error = f"Network connection error to Gemini API: {str(e)}"
             time.sleep(1.0)
@@ -242,10 +269,16 @@ def generate_chat_response(
     api_key = settings.GEMINI_API_KEY
     if not api_key:
         return "", (
-            "Google Gemini API is not configured on the server.\n\n"
-            "To enable the AI Study Assistant:\n"
-            "1. Obtain a free API key at https://aistudio.google.com/app/apikey\n"
-            "2. Set the `GEMINI_API_KEY` environment variable in your Render Web Service dashboard.\n\n"
+            "Google Gemini API is not configured on the server.
+
+"
+            "To enable the AI Study Assistant:
+"
+            "1. Obtain a free API key at https://aistudio.google.com/app/apikey
+"
+            "2. Set the `GEMINI_API_KEY` environment variable in your Render Web Service dashboard.
+
+"
             "All other features (Semantic Search, Heatmap, PYQ Library, Uploads) continue to work!"
         )
 
@@ -256,9 +289,9 @@ def generate_chat_response(
     if answer:
         return answer, None
 
-    # If configured model failed with 404 or unsupported, attempt fallback to gemini-1.5-flash
-    if error and ("not found" in error.lower() or "404" in error or "503" in error):
-        logger.info("Attempting fallback to gemini-1.5-flash...")
+    # If configured model failed with 404, 503, or timeout, attempt fallback to gemini-2.5-flash
+    if error and any(k in error.lower() for k in ["not found", "404", "503", "timed out", "unavailable", "busy"]):
+        logger.info("Attempting fallback to gemini-2.5-flash...")
         fb_answer, fb_error = _call_gemini_api(prompt, "gemini-2.5-flash", api_key)
         if fb_answer:
             return fb_answer, None
