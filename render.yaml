@@ -38,13 +38,14 @@ services:
         value: "INFO"
 
   # ─── React + TypeScript Vite Frontend Static Site ─────────────────────────
-  - type: static
+  - type: web
+    runtime: static
     name: semantic-pyq-frontend
     region: oregon
     plan: free
     rootDir: frontend
     buildCommand: "npm install && npm run build"
-    staticPublishPath: dist
+    staticPublishPath: ./dist
     routes:
       - type: rewrite
         source: "/*"
