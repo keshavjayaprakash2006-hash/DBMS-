@@ -32,7 +32,7 @@ export default function AIAssistant() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState(initialPrompt);
   const [sending, setSending] = useState(false);
-  const [ollamaStatus, setOllamaStatus] = useState<any>(null);
+  const [aiStatus, setAiStatus] = useState<any>(null);
   const [expandedSources, setExpandedSources] = useState<Record<number, boolean>>({});
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -45,10 +45,10 @@ export default function AIAssistant() {
     scrollToBottom();
   }, [messages]);
 
-  // Check Ollama status
+  // Check AI Service status
   useEffect(() => {
-    healthApi.ollama().then(setOllamaStatus).catch(() => {
-      setOllamaStatus({ status: 'unavailable', error: 'Ollama not detected' });
+    healthApi.ai().then(setAiStatus).catch(() => {
+      setAiStatus({ status: 'unconfigured', error: 'Gemini API not configured' });
     });
     subjectsApi.list().then(setSubjects).catch(() => {});
     loadSessions();
@@ -218,23 +218,23 @@ export default function AIAssistant() {
 
       {/* Chat Pane */}
       <div className="flex-1 bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col overflow-hidden">
-        {/* Ollama Status Alert Banner if offline */}
-        {ollamaStatus && ollamaStatus.status !== 'ok' && (
+        {/* Gemini Status Alert Banner if unconfigured or error */}
+        {aiStatus && aiStatus.status !== 'ok' && (
           <div className="p-3 bg-amber-50 border-b border-amber-200 text-amber-900 text-xs flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0" />
               <span>
-                <strong>Ollama Status:</strong> {ollamaStatus.error || 'Ollama offline'}. Start Ollama locally with:{' '}
-                <code className="bg-amber-100 px-1 py-0.5 rounded font-mono text-[11px]">ollama serve</code>
+                <strong>AI Assistant Status:</strong> {aiStatus.error || 'Gemini API not configured'}. Set{' '}
+                <code className="bg-amber-100 px-1 py-0.5 rounded font-mono text-[11px]">GEMINI_API_KEY</code> on Render backend to enable AI study answers.
               </span>
             </div>
             <a
-              href="https://ollama.ai"
+              href="https://aistudio.google.com/app/apikey"
               target="_blank"
               rel="noreferrer"
               className="text-amber-800 underline font-semibold flex items-center gap-1 flex-shrink-0"
             >
-              Get Ollama <ExternalLink className="w-3 h-3" />
+              Get Gemini Key <ExternalLink className="w-3 h-3" />
             </a>
           </div>
         )}

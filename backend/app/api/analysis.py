@@ -88,7 +88,7 @@ def trigger_analysis(
     background_tasks.add_task(
         _run_analysis_background,
         str(subject_id),
-        settings.DATABASE_URL,
+        settings.normalized_database_url,
         str(analysis.analysis_id),
     )
 

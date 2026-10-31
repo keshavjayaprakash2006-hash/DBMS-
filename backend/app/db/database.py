@@ -1,19 +1,28 @@
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
-from sqlalchemy.pool import QueuePool
+from sqlalchemy.pool import QueuePool, NullPool
 from app.core.config import settings
 import logging
 
 logger = logging.getLogger(__name__)
 
-engine = create_engine(
-    settings.DATABASE_URL,
-    poolclass=QueuePool,
-    pool_size=10,
-    max_overflow=20,
-    pool_pre_ping=True,
-    echo=settings.APP_ENV == "development",
-)
+db_url = settings.normalized_database_url
+is_sqlite = db_url.startswith("sqlite")
+
+engine_kwargs = {
+    "echo": settings.APP_ENV == "development",
+}
+
+if is_sqlite:
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    engine_kwargs["poolclass"] = QueuePool
+    engine_kwargs["pool_size"] = 5
+    engine_kwargs["max_overflow"] = 10
+    engine_kwargs["pool_pre_ping"] = True
+    engine_kwargs["pool_recycle"] = 300
+
+engine = create_engine(db_url, **engine_kwargs)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -36,7 +45,6 @@ def check_database_connection() -> dict:
             conn.execute(text("SELECT 1"))
             # Check pgvector
             try:
-                conn.execute(text("SELECT extname FROM pg_extension WHERE extname = 'vector'"))
                 pgvector_result = conn.execute(
                     text("SELECT extname FROM pg_extension WHERE extname = 'vector'")
                 ).fetchone()

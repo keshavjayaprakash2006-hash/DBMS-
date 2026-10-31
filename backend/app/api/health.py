@@ -1,9 +1,8 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from sqlalchemy import func, text
-from app.db.database import get_db, check_database_connection
+from fastapi import APIRouter, Depends
+from app.db.database import check_database_connection
 from app.services.embedding_service import check_embedding_service
-from app.services.chat_service import check_ollama
+from app.services.chat_service import check_ai_service, check_ollama
+from app.services.storage_service import check_storage_service
 from app.schemas.schemas import SystemHealth, HealthStatus
 import logging
 
@@ -18,34 +17,49 @@ def health_check():
 
 @router.get("/database")
 def database_health():
-    result = check_database_connection()
-    return result
+    return check_database_connection()
 
 
 @router.get("/embedding")
 def embedding_health():
-    result = check_embedding_service()
-    return result
+    return check_embedding_service()
+
+
+@router.get("/ai")
+def ai_health():
+    return check_ai_service()
 
 
 @router.get("/ollama")
 def ollama_health():
-    result = check_ollama()
-    return result
+    """Retained for frontend backward compatibility; checks AI assistant."""
+    return check_ollama()
+
+
+@router.get("/storage")
+def storage_health():
+    return check_storage_service()
 
 
 @router.get("/system", response_model=SystemHealth)
 def system_health():
     db_result = check_database_connection()
     emb_result = check_embedding_service()
-    ollama_result = check_ollama()
+    ai_result = check_ai_service()
+    storage_result = check_storage_service()
 
     db_ok = db_result.get("status") == "ok"
     pgv_ok = db_result.get("pgvector", False)
     emb_ok = emb_result.get("status") == "ok"
-    ollama_ok = ollama_result.get("status") == "ok"
+    ai_ok = ai_result.get("status") == "ok"
+    storage_ok = storage_result.get("status") == "ok"
 
     overall = "ok" if (db_ok and pgv_ok and emb_ok) else "degraded"
+
+    ai_health_status = HealthStatus(
+        status=ai_result.get("status", "unknown"),
+        details=ai_result,
+    )
 
     return SystemHealth(
         overall=overall,
@@ -58,11 +72,13 @@ def system_health():
             details={"available": pgv_ok},
         ),
         embedding=HealthStatus(
-            status=emb_result.get("status"),
+            status=emb_result.get("status", "unknown"),
             details=emb_result,
         ),
-        ollama=HealthStatus(
-            status=ollama_result.get("status"),
-            details=ollama_result,
+        ollama=ai_health_status,
+        ai=ai_health_status,
+        storage=HealthStatus(
+            status=storage_result.get("status", "unknown"),
+            details=storage_result,
         ),
     )

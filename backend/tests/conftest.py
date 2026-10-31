@@ -4,16 +4,18 @@ Pytest configuration and fixtures for backend tests.
 import os
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 # Use SQLite for unit tests (no PostgreSQL required)
 TEST_DATABASE_URL = "sqlite:///./test_pyq.db"
 
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
+os.environ["EMBEDDING_PROVIDER"] = "local"
 os.environ["EMBEDDING_MODEL_NAME"] = "all-MiniLM-L6-v2"
 os.environ["EMBEDDING_DIMENSION"] = "384"
 os.environ["UPLOAD_DIRECTORY"] = "./test_uploads"
+os.environ["HF_HUB_OFFLINE"] = "1"
 
 from app.db.database import Base
 from app.main import app

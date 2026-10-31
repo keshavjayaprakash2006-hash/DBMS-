@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import List, Tuple, Optional
 
 from app.core.config import settings
+from app.services import storage_service
 
 logger = logging.getLogger(__name__)
 
@@ -57,13 +58,17 @@ def extract_text_from_txt(file_path: str) -> Tuple[str, Optional[str]]:
 
 def extract_text(file_path: str, file_type: str) -> Tuple[str, Optional[str]]:
     """Route to the correct extractor based on file type."""
+    local_path = storage_service.ensure_local_copy(file_path)
+    if not local_path or not os.path.exists(local_path):
+        return "", f"Document file could not be accessed from storage: {file_path}"
+
     ft = file_type.lower()
     if ft == "pdf":
-        return extract_text_from_pdf(file_path)
+        return extract_text_from_pdf(local_path)
     elif ft in ("docx", "doc"):
-        return extract_text_from_docx(file_path)
+        return extract_text_from_docx(local_path)
     elif ft in ("txt", "md", "markdown", "text"):
-        return extract_text_from_txt(file_path)
+        return extract_text_from_txt(local_path)
     else:
         return "", f"Unsupported file type: {file_type}"
 
@@ -179,10 +184,6 @@ def generate_stored_filename(original_filename: str) -> str:
 
 
 def save_uploaded_file(content: bytes, stored_filename: str) -> str:
-    """Save file to the uploads directory. Returns full path."""
-    upload_dir = Path(settings.UPLOAD_DIRECTORY)
-    upload_dir.mkdir(parents=True, exist_ok=True)
-    file_path = upload_dir / stored_filename
-    with open(file_path, "wb") as f:
-        f.write(content)
-    return str(file_path)
+    """Save file to storage (local or cloud). Returns stored_path."""
+    stored_identifier, _ = storage_service.save_file(content, stored_filename)
+    return stored_identifier

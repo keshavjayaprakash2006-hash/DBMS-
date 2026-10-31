@@ -30,7 +30,7 @@ def _embed_pyq_background(pyq_id: str, db_url: str):
         if pyq and pyq.embedding is None:
             emb = embedding_service.generate_embedding(pyq.question)
             pyq.embedding = emb
-            pyq.embedding_model = settings.EMBEDDING_MODEL_NAME
+            pyq.embedding_model = embedding_service.get_model_name()
             db.commit()
     except Exception as e:
         logger.error(f"Failed to embed PYQ {pyq_id}: {e}")
@@ -105,7 +105,7 @@ def create_pyq(
     db.refresh(pyq)
 
     # Embed in background
-    background_tasks.add_task(_embed_pyq_background, str(pyq.pyq_id), settings.DATABASE_URL)
+    background_tasks.add_task(_embed_pyq_background, str(pyq.pyq_id), settings.normalized_database_url)
     return _pyq_out(pyq, db)
 
 
@@ -142,7 +142,7 @@ def update_pyq(
     db.refresh(pyq)
 
     if question_changed:
-        background_tasks.add_task(_embed_pyq_background, str(pyq.pyq_id), settings.DATABASE_URL)
+        background_tasks.add_task(_embed_pyq_background, str(pyq.pyq_id), settings.normalized_database_url)
 
     return _pyq_out(pyq, db)
 
@@ -248,7 +248,7 @@ async def import_pyqs_from_csv(
 
     # Embed in background
     for pyq_id in pyq_ids_to_embed:
-        background_tasks.add_task(_embed_pyq_background, pyq_id, settings.DATABASE_URL)
+        background_tasks.add_task(_embed_pyq_background, pyq_id, settings.normalized_database_url)
 
     return CSVImportResult(
         total_rows=imported + failed + duplicate_skipped,

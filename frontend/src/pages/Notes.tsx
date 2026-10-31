@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import {
   FileText, Upload, Trash2, RefreshCw, AlertCircle, CheckCircle,
   Clock, Loader2, Search, Filter, BookOpen, Layers, Eye, X,
-  ChevronDown, FileUp, Sparkles
+  ChevronDown, FileUp, Sparkles, Download
 } from 'lucide-react';
 import { documentsApi, subjectsApi } from '../services/api';
 import type { Document, Subject, NoteChunk } from '../types';
@@ -353,6 +353,16 @@ export default function Notes() {
                     </td>
                     <td className="px-5 py-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        <a
+                          href={documentsApi.getDownloadUrl(doc.document_id)}
+                          download={doc.filename}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                          title="Download Original Document"
+                        >
+                          <Download className="w-4 h-4" />
+                        </a>
                         <button
                           onClick={() => handleViewChunks(doc)}
                           className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 transition-colors"

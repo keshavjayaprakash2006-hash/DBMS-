@@ -2,28 +2,31 @@ import React, { useEffect, useState } from 'react';
 import {
   Settings as SettingsIcon, Database, Cpu, Bot, CheckCircle,
   AlertCircle, RefreshCw, Terminal, ExternalLink, Copy, Check,
-  Sliders, Shield, Server, FileCode
+  Sliders, Shield, Server, HardDrive, Cloud, Key
 } from 'lucide-react';
 import { healthApi } from '../services/api';
 
 export default function Settings() {
-  const [systemHealth, setSystemHealth] = useState<any>(null);
   const [dbHealth, setDbHealth] = useState<any>(null);
-  const [ollamaHealth, setOllamaHealth] = useState<any>(null);
+  const [embHealth, setEmbHealth] = useState<any>(null);
+  const [aiHealth, setAiHealth] = useState<any>(null);
+  const [storageHealth, setStorageHealth] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const fetchHealth = async () => {
     try {
       setLoading(true);
-      const [sys, db, ol] = await Promise.allSettled([
-        healthApi.system(),
+      const [db, emb, ai, st] = await Promise.allSettled([
         healthApi.database(),
-        healthApi.ollama(),
+        healthApi.embedding(),
+        healthApi.ai ? healthApi.ai() : healthApi.ollama(),
+        healthApi.storage(),
       ]);
-      setSystemHealth(sys.status === 'fulfilled' ? sys.value : { status: 'error' });
       setDbHealth(db.status === 'fulfilled' ? db.value : { status: 'error', error: 'Connection refused' });
-      setOllamaHealth(ol.status === 'fulfilled' ? ol.value : { status: 'unavailable', error: 'Not running' });
+      setEmbHealth(emb.status === 'fulfilled' ? emb.value : { status: 'error', error: 'Service error' });
+      setAiHealth(ai.status === 'fulfilled' ? ai.value : { status: 'unconfigured', error: 'Not configured' });
+      setStorageHealth(st.status === 'fulfilled' ? st.value : { status: 'local', provider: 'local' });
     } finally {
       setLoading(false);
     }
@@ -46,10 +49,10 @@ export default function Settings() {
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
             <SettingsIcon className="w-6 h-6 text-slate-700" />
-            System Status & Configuration
+            System Status & Cloud Configuration
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Monitor offline vector database connectivity, embedding models, and local LLM runtime.
+            Real-time status of PostgreSQL + pgvector, semantic embeddings, Google Gemini AI, and cloud object storage.
           </p>
         </div>
         <button
@@ -63,7 +66,7 @@ export default function Settings() {
       </div>
 
       {/* Services Health Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Database Health Card */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
           <div>
@@ -81,16 +84,18 @@ export default function Settings() {
                 </span>
               )}
             </div>
-            <h3 className="font-bold text-slate-900">PostgreSQL + pgvector</h3>
+            <h3 className="font-bold text-slate-900 text-sm">PostgreSQL Database</h3>
             <p className="text-xs text-slate-500 mt-1">
-              Relational metadata storage and HNSW vector similarity indexes.
+              Neon Cloud PostgreSQL with pgvector relational storage.
             </p>
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-600 space-y-1">
             <div className="flex justify-between">
-              <span className="text-slate-400">pgvector extension:</span>
-              <span className="font-semibold">{dbHealth?.pgvector_enabled ? 'Enabled' : 'Pending'}</span>
+              <span className="text-slate-400">pgvector:</span>
+              <span className="font-semibold text-emerald-700">
+                {dbHealth?.pgvector_enabled ? 'Enabled' : 'Pending'}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-400">Dialect:</span>
@@ -106,62 +111,113 @@ export default function Settings() {
               <span className="p-2.5 rounded-xl bg-indigo-50 text-indigo-600">
                 <Cpu className="w-5 h-5" />
               </span>
-              <span className="badge-success inline-flex items-center gap-1 text-[11px]">
-                <CheckCircle className="w-3 h-3" /> Local PyTorch
-              </span>
+              {embHealth?.status === 'ok' ? (
+                <span className="badge-success inline-flex items-center gap-1 text-[11px]">
+                  <CheckCircle className="w-3 h-3" /> Ready
+                </span>
+              ) : (
+                <span className="badge-warning inline-flex items-center gap-1 text-[11px]">
+                  <AlertCircle className="w-3 h-3" /> Degraded
+                </span>
+              )}
             </div>
-            <h3 className="font-bold text-slate-900">Sentence Transformers</h3>
+            <h3 className="font-bold text-slate-900 text-sm">Semantic Embeddings</h3>
             <p className="text-xs text-slate-500 mt-1">
-              Deterministic offline embeddings generating 384-dimensional dense vectors.
+              Dense vector generator for semantic search and PYQ correlation.
             </p>
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-600 space-y-1">
             <div className="flex justify-between">
               <span className="text-slate-400">Model:</span>
-              <span className="font-mono text-[11px] font-semibold text-indigo-700">all-MiniLM-L6-v2</span>
+              <span className="font-mono text-[11px] font-semibold text-indigo-700 truncate max-w-[120px]" title={embHealth?.model}>
+                {embHealth?.model || 'text-embedding-004'}
+              </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-400">Dimensions:</span>
-              <span className="font-semibold">384 dims</span>
+              <span className="text-slate-400">Dimension:</span>
+              <span className="font-semibold">{embHealth?.dimension || 384} dims</span>
             </div>
           </div>
         </div>
 
-        {/* Ollama LLM Service Card */}
+        {/* AI Assistant Health Card */}
         <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
               <span className="p-2.5 rounded-xl bg-purple-50 text-purple-600">
                 <Bot className="w-5 h-5" />
               </span>
-              {ollamaHealth?.status === 'ok' ? (
+              {aiHealth?.status === 'ok' ? (
                 <span className="badge-success inline-flex items-center gap-1 text-[11px]">
-                  <CheckCircle className="w-3 h-3" /> Online
+                  <CheckCircle className="w-3 h-3" /> Connected
+                </span>
+              ) : aiHealth?.status === 'unconfigured' ? (
+                <span className="badge-warning inline-flex items-center gap-1 text-[11px]">
+                  <AlertCircle className="w-3 h-3" /> Key Missing
                 </span>
               ) : (
-                <span className="badge-warning inline-flex items-center gap-1 text-[11px]">
-                  <AlertCircle className="w-3 h-3" /> Not Detected
+                <span className="badge-danger inline-flex items-center gap-1 text-[11px]">
+                  <AlertCircle className="w-3 h-3" /> Error
                 </span>
               )}
             </div>
-            <h3 className="font-bold text-slate-900">Ollama Local LLM</h3>
+            <h3 className="font-bold text-slate-900 text-sm">AI Study Assistant</h3>
             <p className="text-xs text-slate-500 mt-1">
-              Local inference runtime for study explanations and RAG question answering.
+              Google Gemini API with RAG context grounding.
             </p>
           </div>
 
           <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-600 space-y-1">
             <div className="flex justify-between">
-              <span className="text-slate-400">Target Model:</span>
-              <span className="font-mono text-[11px] font-semibold text-purple-700">
-                {ollamaHealth?.configured_model || 'mistral'}
+              <span className="text-slate-400">Model:</span>
+              <span className="font-mono text-[11px] font-semibold text-purple-700 truncate max-w-[120px]">
+                {aiHealth?.model || aiHealth?.configured_model || 'gemini-2.5-flash'}
               </span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-400">Installed:</span>
-              <span className="font-semibold">
-                {ollamaHealth?.available_models?.length || 0} models
+              <span className="text-slate-400">Status:</span>
+              <span className="font-semibold text-slate-700">
+                {aiHealth?.status === 'ok' ? 'Online' : 'Unconfigured'}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Cloud Object Storage Health Card */}
+        <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <span className="p-2.5 rounded-xl bg-amber-50 text-amber-600">
+                <HardDrive className="w-5 h-5" />
+              </span>
+              {storageHealth?.status === 'ok' ? (
+                <span className="badge-success inline-flex items-center gap-1 text-[11px]">
+                  <CheckCircle className="w-3 h-3" /> Persistent
+                </span>
+              ) : (
+                <span className="badge-neutral inline-flex items-center gap-1 text-[11px]">
+                  Local Disk
+                </span>
+              )}
+            </div>
+            <h3 className="font-bold text-slate-900 text-sm">Document Storage</h3>
+            <p className="text-xs text-slate-500 mt-1">
+              Persistent storage for uploaded notes (PDF, DOCX, TXT).
+            </p>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-slate-100 text-xs text-slate-600 space-y-1">
+            <div className="flex justify-between">
+              <span className="text-slate-400">Provider:</span>
+              <span className="font-semibold text-slate-700 uppercase text-[11px]">
+                {storageHealth?.provider || 'Supabase'}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">Bucket:</span>
+              <span className="font-mono text-[11px]">
+                {storageHealth?.bucket || 'documents'}
               </span>
             </div>
           </div>
@@ -173,94 +229,68 @@ export default function Settings() {
         <div className="p-5 border-b border-slate-100">
           <h3 className="font-bold text-slate-900 flex items-center gap-2 text-sm">
             <Sliders className="w-4 h-4 text-slate-600" />
-            Runtime Configuration Parameters
+            Runtime Configuration & Vector Parameters
           </h3>
         </div>
         <div className="divide-y divide-slate-100 text-xs">
           <div className="p-4 flex items-center justify-between">
             <div>
               <p className="font-semibold text-slate-800">Embedding Vector Dimension</p>
-              <p className="text-slate-400">Dense float vector size configured in database schema</p>
+              <p className="text-slate-400">Dense float vector size configured in database schema and vector extension</p>
             </div>
-            <code className="bg-slate-100 px-2 py-1 rounded text-slate-700 font-mono">384</code>
+            <code className="bg-slate-100 px-2.5 py-1 rounded text-indigo-700 font-mono font-bold">384</code>
           </div>
           <div className="p-4 flex items-center justify-between">
             <div>
               <p className="font-semibold text-slate-800">Vector Distance Metric</p>
-              <p className="text-slate-400">PostgreSQL pgvector cosine distance operator</p>
+              <p className="text-slate-400">PostgreSQL pgvector cosine distance operator with HNSW indexing</p>
             </div>
-            <code className="bg-slate-100 px-2 py-1 rounded text-slate-700 font-mono">&lt;=&gt; (Cosine Distance)</code>
+            <code className="bg-slate-100 px-2.5 py-1 rounded text-slate-700 font-mono">&lt;=&gt; (Cosine Distance)</code>
           </div>
           <div className="p-4 flex items-center justify-between">
             <div>
               <p className="font-semibold text-slate-800">Semantic Top-K Matches</p>
-              <p className="text-slate-400">Number of nearest chunks matched per previous year question</p>
+              <p className="text-slate-400">Number of nearest chunks matched per Previous Year Question in Heatmap</p>
             </div>
-            <code className="bg-slate-100 px-2 py-1 rounded text-slate-700 font-mono">5 matches</code>
+            <code className="bg-slate-100 px-2.5 py-1 rounded text-slate-700 font-mono">3 - 5 matches</code>
           </div>
           <div className="p-4 flex items-center justify-between">
             <div>
-              <p className="font-semibold text-slate-800">Document Chunking Strategy</p>
-              <p className="text-slate-400">Paragraph-aware sliding window with semantic boundary detection</p>
+              <p className="font-semibold text-slate-800">RAG Context Grounding</p>
+              <p className="text-slate-400">Retrieved course notes chunks + exam question distribution sent to Gemini API</p>
             </div>
-            <code className="bg-slate-100 px-2 py-1 rounded text-slate-700 font-mono">300 words (overlap: 50)</code>
+            <span className="badge-primary">Strict Academic Grounding</span>
           </div>
         </div>
       </div>
 
-      {/* Setup & Local Deployment Guide */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-5">
+      {/* Cloud Architecture Summary */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
         <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-          <Terminal className="w-5 h-5 text-indigo-600" />
-          Offline Setup Quickstart
+          <Cloud className="w-5 h-5 text-indigo-600" />
+          Production Cloud Architecture (Zero-Cost Free Tier)
         </h3>
+        <p className="text-xs text-slate-500 leading-relaxed">
+          This system is engineered to run permanently on cloud infrastructure without requiring local laptop execution or local Ollama processes:
+        </p>
 
-        {/* PostgreSQL Guide */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              1. PostgreSQL + pgvector Setup
-            </p>
-            <button
-              onClick={() => handleCopy('pg', 'CREATE EXTENSION IF NOT EXISTS vector;')}
-              className="text-xs text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1"
-            >
-              {copiedKey === 'pg' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              Copy SQL
-            </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+          <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50 space-y-1">
+            <p className="font-bold text-slate-800">Frontend (Render Static Site)</p>
+            <p className="text-slate-500">React + TypeScript SPA built with Vite, served globally on Render CDN with client-side SPA routing.</p>
           </div>
-          <p className="text-xs text-slate-500">
-            Install PostgreSQL 15+ and pgvector. Then connect to your database and enable the vector extension:
-          </p>
-          <pre className="bg-slate-900 text-slate-100 p-3.5 rounded-xl font-mono text-xs overflow-x-auto">
-{`-- Connect to PostgreSQL and create database
-CREATE DATABASE pyq_analyzer;
-\\c pyq_analyzer;
-CREATE EXTENSION IF NOT EXISTS vector;`}
-          </pre>
-        </div>
-
-        {/* Ollama Guide */}
-        <div className="space-y-2 pt-3 border-t border-slate-100">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-              2. Ollama Local LLM Setup
-            </p>
-            <button
-              onClick={() => handleCopy('ollama', 'ollama pull mistral\nollama serve')}
-              className="text-xs text-indigo-600 hover:text-indigo-800 inline-flex items-center gap-1"
-            >
-              {copiedKey === 'ollama' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              Copy Commands
-            </button>
+          <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50 space-y-1">
+            <p className="font-bold text-slate-800">Backend (Render Web Service)</p>
+            <p className="text-slate-500">FastAPI backend running with Uvicorn on Linux container, bound to dynamic port with automatic SSL.</p>
           </div>
-          <p className="text-xs text-slate-500">
-            Download Ollama from <a href="https://ollama.ai" target="_blank" rel="noreferrer" className="text-indigo-600 underline">ollama.ai</a>, then pull and run your preferred model:
-          </p>
-          <pre className="bg-slate-900 text-slate-100 p-3.5 rounded-xl font-mono text-xs overflow-x-auto">
-{`ollama pull mistral
-ollama serve`}
-          </pre>
+          <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50 space-y-1">
+            <p className="font-bold text-slate-800">Database (Neon PostgreSQL)</p>
+            <p className="text-slate-500">Managed cloud PostgreSQL with native pgvector extension and persistent HNSW vector indexes.</p>
+          </div>
+          <div className="p-3.5 rounded-xl border border-slate-100 bg-slate-50 space-y-1">
+            <p className="font-bold text-slate-800">AI & Embeddings (Google Gemini API)</p>
+            <p className="text-slate-500">Gemini 2.5 Flash for contextual answers + Text-Embedding-004 generating 384-dimensional dense vectors.</p>
+          </div>
         </div>
       </div>
     </div>

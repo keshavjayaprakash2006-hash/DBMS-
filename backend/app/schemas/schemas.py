@@ -250,3 +250,5 @@ class SystemHealth(BaseModel):
     pgvector: HealthStatus
     embedding: HealthStatus
     ollama: HealthStatus
+    ai: Optional[HealthStatus] = None
+    storage: Optional[HealthStatus] = None

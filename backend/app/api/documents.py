@@ -1,15 +1,18 @@
 import logging
+import mimetypes
 from typing import List, Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks, Response
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+import io
 
 from app.db.database import get_db
 from app.models.models import Document, Subject, NoteChunk, ProcessingStatus
 from app.schemas.schemas import DocumentOut, NoteChunkOut
-from app.services import document_service
-from app.services import embedding_service
+from app.services import document_service, embedding_service, storage_service
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/documents", tags=["Documents"])
@@ -67,12 +70,11 @@ def _process_document_background(document_id: str, db_url: str):
 
         # Generate embeddings in batches
         try:
-            from app.core.config import settings
             texts = [c.content for c in chunk_objects]
             embeddings = embedding_service.generate_embeddings_batch(texts)
             for chunk, emb in zip(chunk_objects, embeddings):
                 chunk.embedding = emb
-                chunk.embedding_model = settings.EMBEDDING_MODEL_NAME
+                chunk.embedding_model = embedding_service.get_model_name()
             doc.embeddings_generated = True
         except Exception as emb_err:
             logger.warning(f"Embedding generation failed: {emb_err}")
@@ -134,8 +136,6 @@ async def upload_document(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ):
-    from app.core.config import settings
-
     # Validate subject exists
     subject = db.query(Subject).filter(Subject.subject_id == subject_id).first()
     if not subject:
@@ -150,12 +150,11 @@ async def upload_document(
         raise HTTPException(status_code=422, detail=error)
 
     ext = document_service.get_file_extension(file.filename or "")
-    stored_filename = document_service.generate_stored_filename(file.filename or "upload.txt")
-    stored_path = document_service.save_uploaded_file(content, stored_filename)
+    stored_path = document_service.save_uploaded_file(content, file.filename or "upload.txt")
 
     doc = Document(
         subject_id=subject_id,
-        filename=file.filename,
+        filename=file.filename or "uploaded_document",
         stored_path=stored_path,
         file_type=ext,
         processing_status=ProcessingStatus.PENDING,
@@ -168,7 +167,7 @@ async def upload_document(
     background_tasks.add_task(
         _process_document_background,
         str(doc.document_id),
-        settings.DATABASE_URL,
+        settings.normalized_database_url,
     )
 
     return DocumentOut(
@@ -209,17 +208,64 @@ def get_document(document_id: UUID, db: Session = Depends(get_db)):
     )
 
 
+@router.get("/{document_id}/download")
+def download_document(document_id: UUID, db: Session = Depends(get_db)):
+    """Retrieve and download original document from persistent cloud/local storage."""
+    doc = db.query(Document).filter(Document.document_id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    file_bytes = storage_service.get_file_bytes(doc.stored_path)
+    if not file_bytes:
+        raise HTTPException(status_code=404, detail="Document file content not found in storage")
+
+    mime_type, _ = mimetypes.guess_type(doc.filename)
+    if not mime_type:
+        mime_type = "application/octet-stream"
+
+    return Response(
+        content=file_bytes,
+        media_type=mime_type,
+        headers={
+            "Content-Disposition": f'attachment; filename="{doc.filename}"',
+            "Cache-Control": "public, max-age=3600",
+        },
+    )
+
+
+@router.get("/{document_id}/view")
+def view_document(document_id: UUID, db: Session = Depends(get_db)):
+    """View original document inline in browser (e.g. PDF viewer)."""
+    doc = db.query(Document).filter(Document.document_id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    file_bytes = storage_service.get_file_bytes(doc.stored_path)
+    if not file_bytes:
+        raise HTTPException(status_code=404, detail="Document file content not found in storage")
+
+    mime_type, _ = mimetypes.guess_type(doc.filename)
+    if not mime_type:
+        mime_type = "application/octet-stream"
+
+    return Response(
+        content=file_bytes,
+        media_type=mime_type,
+        headers={
+            "Content-Disposition": f'inline; filename="{doc.filename}"',
+        },
+    )
+
+
 @router.delete("/{document_id}", status_code=204)
 def delete_document(document_id: UUID, db: Session = Depends(get_db)):
     doc = db.query(Document).filter(Document.document_id == document_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
-    import os
-    try:
-        if os.path.exists(doc.stored_path):
-            os.remove(doc.stored_path)
-    except Exception as e:
-        logger.warning(f"Could not delete file {doc.stored_path}: {e}")
+
+    # Consistent deletion from storage (cloud and local)
+    storage_service.delete_file(doc.stored_path)
+
     db.delete(doc)
     db.commit()
 
@@ -230,7 +276,6 @@ def reprocess_document(
     background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
 ):
-    from app.core.config import settings
     doc = db.query(Document).filter(Document.document_id == document_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
@@ -242,7 +287,7 @@ def reprocess_document(
     background_tasks.add_task(
         _process_document_background,
         str(doc.document_id),
-        settings.DATABASE_URL,
+        settings.normalized_database_url,
     )
     db.refresh(doc)
     subject = db.query(Subject).filter(Subject.subject_id == doc.subject_id).first()

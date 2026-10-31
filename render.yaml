@@ -1,0 +1,54 @@
+services:
+  # ─── FastAPI Backend Web Service ───────────────────────────────────────────
+  - type: web
+    name: semantic-pyq-backend
+    runtime: python
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: "pip install --upgrade pip && pip install -r requirements.txt"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /health
+    envVars:
+      - key: APP_NAME
+        value: "Semantic PYQ Analyzer"
+      - key: APP_ENV
+        value: "production"
+      - key: DATABASE_URL
+        sync: false # Set in Render Dashboard: Neon PostgreSQL connection string with ?sslmode=require
+      - key: GEMINI_API_KEY
+        sync: false # Set in Render Dashboard: Google Gemini API Key from https://aistudio.google.com/app/apikey
+      - key: GEMINI_MODEL
+        value: "gemini-2.5-flash"
+      - key: EMBEDDING_PROVIDER
+        value: "gemini" # Uses Gemini text-embedding-004 with 384 dimensions (lightweight for 512MB RAM)
+      - key: EMBEDDING_MODEL_NAME
+        value: "text-embedding-004"
+      - key: EMBEDDING_DIMENSION
+        value: "384"
+      - key: SUPABASE_URL
+        sync: false # Set in Render Dashboard: Supabase Project URL (e.g. https://xyz.supabase.co)
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false # Set in Render Dashboard: Supabase Service Role Secret Key
+      - key: SUPABASE_STORAGE_BUCKET
+        value: "documents"
+      - key: CORS_ORIGINS
+        value: "*" # Set to frontend URL or * to allow browser access
+      - key: LOG_LEVEL
+        value: "INFO"
+
+  # ─── React + TypeScript Vite Frontend Static Site ─────────────────────────
+  - type: static
+    name: semantic-pyq-frontend
+    region: oregon
+    plan: free
+    rootDir: frontend
+    buildCommand: "npm install && npm run build"
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: "/*"
+        destination: "/index.html"
+    envVars:
+      - key: VITE_API_URL
+        sync: false # Set in Render Dashboard: Public URL of the semantic-pyq-backend service (e.g. https://semantic-pyq-backend.onrender.com)
