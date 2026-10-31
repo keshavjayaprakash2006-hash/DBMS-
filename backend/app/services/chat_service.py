@@ -21,7 +21,7 @@ def _get_active_chat_model(api_key: str) -> str:
         return _discovered_chat_model
 
     preferred = settings.GEMINI_MODEL.replace("models/", "")
-    candidates = [preferred, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-pro"]
+    candidates = ["gemini-3.8-flash", preferred, "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-pro"]
 
     try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
@@ -46,7 +46,7 @@ def _get_active_chat_model(api_key: str) -> str:
     except Exception as e:
         logger.warning(f"Could not list Gemini chat models: {e}")
 
-    _discovered_chat_model = "gemini-2.0-flash"
+    _discovered_chat_model = "gemini-3.8-flash"
     return _discovered_chat_model
 
 
