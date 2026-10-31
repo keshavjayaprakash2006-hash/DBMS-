@@ -25,7 +25,7 @@ services:
       - key: EMBEDDING_PROVIDER
         value: "gemini" # Uses Gemini text-embedding-004 with 384 dimensions (lightweight for 512MB RAM)
       - key: EMBEDDING_MODEL_NAME
-        value: "text-embedding-004"
+        value: "gemini-embedding-001"
       - key: EMBEDDING_DIMENSION
         value: "384"
       - key: SUPABASE_URL

@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     # "gemini" uses Google Gemini text-embedding-004 (lightweight, zero memory overhead on Render)
     # "local" uses Sentence-Transformers all-MiniLM-L6-v2 (offline PyTorch)
     EMBEDDING_PROVIDER: str = "gemini"
-    EMBEDDING_MODEL_NAME: str = "text-embedding-004"
+    EMBEDDING_MODEL_NAME: str = "gemini-embedding-001"
     EMBEDDING_DIMENSION: int = 384
 
     # Cloud Object Storage (Supabase Storage)
