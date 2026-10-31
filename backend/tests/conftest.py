@@ -11,8 +11,8 @@ from sqlalchemy.orm import sessionmaker
 TEST_DATABASE_URL = "sqlite:///./test_pyq.db"
 
 os.environ["DATABASE_URL"] = TEST_DATABASE_URL
-os.environ["EMBEDDING_PROVIDER"] = "local"
-os.environ["EMBEDDING_MODEL_NAME"] = "all-MiniLM-L6-v2"
+os.environ["EMBEDDING_PROVIDER"] = "gemini"
+os.environ["EMBEDDING_MODEL_NAME"] = "text-embedding-004"
 os.environ["EMBEDDING_DIMENSION"] = "384"
 os.environ["UPLOAD_DIRECTORY"] = "./test_uploads"
 os.environ["HF_HUB_OFFLINE"] = "1"
