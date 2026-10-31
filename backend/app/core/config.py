@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
     # AI Assistant (Google Gemini API)
     GEMINI_API_KEY: Optional[str] = None
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-2.0-flash"
     GEMINI_TIMEOUT: int = 45
 
     # Embedding Service

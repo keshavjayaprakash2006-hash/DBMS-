@@ -11,6 +11,44 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+_discovered_chat_model: Optional[str] = None
+
+
+def _get_active_chat_model(api_key: str) -> str:
+    """Discover the active text generation model supported by the Gemini API key."""
+    global _discovered_chat_model
+    if _discovered_chat_model:
+        return _discovered_chat_model
+
+    preferred = settings.GEMINI_MODEL.replace("models/", "")
+    candidates = [preferred, "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-pro"]
+
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
+        with httpx.Client(timeout=8.0) as client:
+            resp = client.get(url)
+            if resp.status_code == 200:
+                data = resp.json()
+                models = data.get("models", [])
+                chat_models = [
+                    m["name"].replace("models/", "")
+                    for m in models
+                    if "generateContent" in m.get("supportedGenerationMethods", [])
+                ]
+                logger.info(f"Available chat models on Gemini API: {chat_models}")
+                for cand in candidates:
+                    if cand in chat_models:
+                        _discovered_chat_model = cand
+                        return cand
+                if chat_models:
+                    _discovered_chat_model = chat_models[0]
+                    return chat_models[0]
+    except Exception as e:
+        logger.warning(f"Could not list Gemini chat models: {e}")
+
+    _discovered_chat_model = "gemini-2.0-flash"
+    return _discovered_chat_model
+
 
 def check_ai_service() -> Dict[str, Any]:
     """Check Google Gemini API configuration and connectivity."""
@@ -24,7 +62,7 @@ def check_ai_service() -> Dict[str, Any]:
         }
 
     masked_key = f"{api_key[:4]}...{api_key[-4:]}" if len(api_key) > 8 else "***"
-    model = settings.GEMINI_MODEL
+    model = _get_active_chat_model(api_key)
 
     try:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}?key={api_key}"
@@ -212,16 +250,16 @@ def generate_chat_response(
         )
 
     prompt = build_rag_prompt(question, chunks, pyqs)
-    model = settings.GEMINI_MODEL
+    model = _get_active_chat_model(api_key)
 
     answer, error = _call_gemini_api(prompt, model, api_key)
     if answer:
         return answer, None
 
     # If configured model failed with 404 or unsupported, attempt fallback to gemini-1.5-flash
-    if error and ("not found" in error.lower() or "404" in error) and model != "gemini-1.5-flash":
+    if error and ("not found" in error.lower() or "404" in error):
         logger.info("Attempting fallback to gemini-1.5-flash...")
-        fb_answer, fb_error = _call_gemini_api(prompt, "gemini-1.5-flash", api_key)
+        fb_answer, fb_error = _call_gemini_api(prompt, "gemini-2.0-flash", api_key)
         if fb_answer:
             return fb_answer, None
         return "", fb_error
